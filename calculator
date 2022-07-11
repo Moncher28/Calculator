@@ -1,0 +1,357 @@
+#include <cmath>
+#include <iostream>
+#include <sstream>
+#include <stack>
+#include <string>
+
+using namespace std;
+
+// FSM states
+enum States { START, OPERATOR, NUMBER, END }; 
+
+
+// Change State
+void checkState(States &state, char ch) { 
+
+  //if number return number, else 0
+  if (isdigit(ch) || ch == '.') 
+    state = NUMBER;
+  else
+    state = OPERATOR;
+}
+
+
+// Check if current operator is prefix operator
+// s - sin, c - cos, t - tg, C - ctg, S - sqrt
+
+bool isPrefixOperator(char ch) { 
+  string prfx = "sctCS";
+  
+  for (int i = 0; i < prfx.length(); i++) {
+    
+    if (prfx[i] == ch) {
+      return true;
+      break;
+    }
+    
+  }
+  return false;
+}
+
+
+
+// Check if current operator is binary operator
+bool isBinaryOperator(char ch) { 
+  
+  string bnr = "+-^/*";
+  
+  for (int i = 0; i < bnr.length(); i++) {
+    
+    if (bnr[i] == ch) {
+      return true;
+      break;
+    }
+  }
+  return false;
+}
+
+
+
+
+// Check priority of current operator
+int checkOperatorPriority(char ch) { 
+  
+  if (ch == '^')
+    return 3;
+  
+  if (ch == '*' || ch == '/')
+    return 2;
+  
+  if (ch == '+' || ch == '-')
+    return 1;
+  
+  if (ch == '(' || ch == ')')
+    return 0;
+    
+  else
+    return -1;
+  
+}
+
+
+// Check is current symbol a operator
+bool isOperator(char op) { 
+  
+  string ops = "+-^/*!sctCS";
+  
+  for (int i = 0; i < ops.length(); i++) {
+    
+    if (ops[i] == op) {
+      return true;
+      break;
+    }
+  }
+  return false;
+}
+
+
+//double stack
+void doMath(char op, stack<double> &stack) {
+  
+  double a, b;
+  
+  switch (op) {
+    
+  case '+':
+    
+    a = stack.top();
+    stack.pop();
+    
+    b = stack.top();
+    stack.pop();
+    
+    stack.push(b + a);
+    break;
+
+    
+  case '-':
+    a = stack.top();
+    stack.pop();
+    
+    b = stack.top();
+    stack.pop();
+    
+    stack.push(b - a);
+    break;
+
+    
+  case '/':
+    a = stack.top();
+    stack.pop();
+    
+    b = stack.top();
+    stack.pop();
+    
+    stack.push(b / a);
+    break;
+
+    
+  case '*':
+    a = stack.top();
+    stack.pop();
+    
+    b = stack.top();
+    stack.pop();
+    
+    stack.push(b * a);
+    break;
+
+    
+  case '^':
+    a = stack.top();
+    stack.pop();
+    
+    b = stack.top();
+    stack.pop();
+    
+    stack.push(pow(b, a));
+    break;
+
+  
+  case 's':
+    a = stack.top();
+    stack.pop();
+    
+    stack.push(sin(a));
+    break;
+
+    
+  case 'c':
+    a = stack.top();
+    stack.pop();
+    
+    stack.push(cos(a));
+    break;
+
+    
+  case 't':
+    a = stack.top();
+    stack.pop();
+    
+    stack.push(tan(a));
+    break;
+
+    
+  case 'C':
+    a = stack.top();
+    stack.pop();
+    
+    stack.push(1 / tan(a));
+    break;
+
+    
+  case 'S':
+    a = stack.top();
+    stack.pop();
+    
+    stack.push(sqrt(a));
+    break;
+  }
+}
+
+// Replace all occurrences in a string
+// Used for initial string proccesing
+
+void replaceAll(string &str, const string &from, const string &to) {
+  
+  if (from.empty())
+    return;
+  size_t start_pos = 0;
+  
+  while ((start_pos = str.find(from, start_pos)) != string::npos) {
+    
+    str.replace(start_pos, from.length(), to);
+    start_pos += to.length();
+    
+  }
+}
+
+void prepareString(string &input){
+	replaceAll(input, "sin", "s");
+  replaceAll(input, "cos", "c");
+  replaceAll(input, "tg", "t");
+  replaceAll(input, "ctg", "C");
+  replaceAll(input, "sqrt", "S");
+
+}
+
+int main() {
+
+  string input;
+  string output;
+  string op = "";
+  string number = "";
+  States state = START;
+  States prevstate = state;
+  char ch;
+  stack<double> stack2;
+  stack<string> stack;
+
+  getline(cin, input);
+
+	prepareString(input);
+
+  istringstream iss(input);
+
+  while (iss >> ch) {
+
+    checkState(state, ch);
+    if ((ch == '-') && (((prevstate == OPERATOR) && (stack.top() == "(")) ||
+                        (prevstate == START))) {
+      output += ch;
+      continue;
+    }
+
+    if (prevstate != state) {
+      if (number != "") {
+        output += number + " ";
+        number = "";
+      }
+      if (op != "") {
+        stack.push(op);
+        op = "";
+      }
+      prevstate = state;
+    }
+
+    if (state == START) {
+      if (!isdigit(ch))
+        state = OPERATOR;
+      else
+        state = NUMBER;
+    }
+
+    if (state == NUMBER) {
+      if (isdigit(ch) || ch == '.') {
+        number += ch;
+      } else {
+        state = OPERATOR;
+        output += number + " ";
+        number = "";
+      }
+    }
+
+    if (state == OPERATOR) {
+
+      if (isPrefixOperator(ch)) {
+        op += ch;
+        stack.push(op);
+        op = "";
+      }
+
+      if (ch == '(') {
+        op += ch;
+        stack.push(op);
+        op = "";
+      }
+
+      if (ch == ')') {
+        while (stack.top() != "(") {
+          op = stack.top();
+          output += op + " ";
+          stack.pop();
+          op = "";
+        }
+        stack.pop();
+      }
+
+      if (isBinaryOperator(ch)) {
+        while (!stack.empty() && (isPrefixOperator(stack.top()[0]) ||
+                                  checkOperatorPriority(stack.top()[0]) >
+                                      checkOperatorPriority(ch))) {
+          op = stack.top();
+          output += op + " ";
+          stack.pop();
+          op = "";
+        }
+        op += ch;
+        stack.push(op);
+        op = "";
+      }
+    }
+  }
+
+  if (number != "") {
+    output += number + " ";
+    number = "";
+  }
+  if (op != "") {
+    stack.push(op);
+    op = "";
+  }
+
+  while (!stack.empty()) {
+    op = stack.top();
+    output += op + " ";
+    stack.pop();
+  }
+
+  istringstream isso(output);
+
+  string temp;
+  double n1, n2;
+
+  while (isso >> temp) {
+    if (temp.length() == 1 && isOperator(temp[0])) {
+      doMath(temp[0], stack2);
+    } else
+      stack2.push(stod(temp));
+  }
+
+  while (!stack2.empty()) {
+    cout << "Ответ: " << stack2.top() << " ";
+    stack2.pop();
+  }
+
+  return 0;
+}
